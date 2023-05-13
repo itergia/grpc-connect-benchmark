@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package benchmark;
+
+option go_package = "github.com/itergia/grpc-connect-benchmark/grpc/gen/proto;benchmarkproto";
+
+service EchoService {
+  rpc Echo(EchoRequest) returns (EchoResponse);
+}
+
+message EchoRequest {
+  string body = 1;
+}
+
+message EchoResponse {
+  string body = 1;
+}
