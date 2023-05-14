@@ -20,7 +20,7 @@ func BenchmarkEcho(b *testing.B) {
 
 	var hdlr echoHandler
 	mux := http.NewServeMux()
-	mux.Handle(benchmarkv1connect.NewEchoServiceHandler(hdlr))
+	mux.Handle(benchmarkv1connect.NewEchoServiceHandler(hdlr, connect.WithCompressMinBytes(1<<10)))
 	l, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		b.Fatalf("Listen failed: %v", err)
