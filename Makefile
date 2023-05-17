@@ -1,5 +1,4 @@
-TESTS = connect grpc
-connect_variants = connectproto grpcproto grpcwebproto
+connect_variants = connectproto grpcproto grpcproto_upstream_client grpcwebproto
 grpc_variants = grpcserver nettlsserver h2cserver
 
 .PHONY: all
