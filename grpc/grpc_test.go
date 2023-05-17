@@ -4,30 +4,24 @@ package grpc
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"math/big"
 	"net"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	benchmarkproto "github.com/itergia/grpc-connect-benchmark/grpc/gen/proto"
 )
 
-func BenchmarkEcho(b *testing.B) {
-	ctx := context.Background()
-
-	var srv echoServer
-	s := grpc.NewServer(grpc.Creds(insecure.NewCredentials()))
-	benchmarkproto.RegisterEchoServiceServer(s, srv)
-
-	l, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		b.Fatalf("Listen failed: %v", err)
-	}
-	defer l.Close()
-	go s.Serve(l)
-
-	cc, err := grpc.DialContext(ctx, l.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+func dialAndRunTest(ctx context.Context, b *testing.B, addr string, dopts ...grpc.DialOption) {
+	cc, err := grpc.DialContext(ctx, addr, dopts...)
 	if err != nil {
 		b.Fatalf("DialContext failed: %v", err)
 	}
@@ -54,4 +48,29 @@ type echoServer struct {
 
 func (echoServer) Echo(ctx context.Context, req *benchmarkproto.EchoRequest) (*benchmarkproto.EchoResponse, error) {
 	return &benchmarkproto.EchoResponse{Body: req.GetBody()}, nil
+}
+
+func newSelfSignedCertificate() (tls.Certificate, error) {
+	tmpl := x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		BasicConstraintsValid: true,
+		NotAfter:              time.Now().Add(time.Hour),
+		Subject:               pkix.Name{CommonName: "test-cert"},
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses:           []net.IP{net.ParseIP("::1")},
+	}
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+	rawCert, err := x509.CreateCertificate(rand.Reader, &tmpl, &tmpl, key.Public(), key)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	return tls.Certificate{
+		Certificate: [][]byte{rawCert},
+		PrivateKey:  key,
+	}, nil
 }

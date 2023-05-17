@@ -15,47 +15,31 @@ import (
 	"github.com/itergia/grpc-connect-benchmark/connect/gen/benchmark/v1/benchmarkv1connect"
 )
 
-func BenchmarkEcho(b *testing.B) {
-	ctx := context.Background()
-
+func runTest(ctx context.Context, b *testing.B, copts ...connect.ClientOption) {
 	var hdlr echoHandler
-	mux := http.NewServeMux()
-	mux.Handle(benchmarkv1connect.NewEchoServiceHandler(hdlr, connect.WithCompressMinBytes(1<<10)))
+	_, h := benchmarkv1connect.NewEchoServiceHandler(hdlr, connect.WithCompressMinBytes(1<<10))
 	l, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		b.Fatalf("Listen failed: %v", err)
 	}
 	defer l.Close()
-	go http.Serve(l, h2c.NewHandler(mux, &http2.Server{}))
+	go http.Serve(l, h2c.NewHandler(h, &http2.Server{}))
 
-	tsts := []struct {
-		Name       string
-		ClientOpts []connect.ClientOption
-	}{
-		{"connect", nil},
-		{"grpc", []connect.ClientOption{connect.WithGRPC()}},
-		{"grpcWeb", []connect.ClientOption{connect.WithGRPCWeb()}},
-	}
+	client := benchmarkv1connect.NewEchoServiceClient(http.DefaultClient, "http://"+l.Addr().String(), copts...)
+	req := &benchmarkv1.EchoRequest{Body: "hello world"}
 
-	for _, tst := range tsts {
-		b.Run(tst.Name, func(b *testing.B) {
-			client := benchmarkv1connect.NewEchoServiceClient(http.DefaultClient, "http://"+l.Addr().String(), tst.ClientOpts...)
-			req := &benchmarkv1.EchoRequest{Body: "hello world"}
-
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				resp, err := client.Echo(
-					ctx,
-					connect.NewRequest(req),
-				)
-				if err != nil {
-					b.Fatalf("Echo failed: %v", err)
-				}
-				if resp.Msg.GetBody() != req.Body {
-					b.Errorf("Echo didn't echo: got %q, want %q", resp.Msg.GetBody(), req.Body)
-				}
-			}
-		})
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		resp, err := client.Echo(
+			ctx,
+			connect.NewRequest(req),
+		)
+		if err != nil {
+			b.Fatalf("Echo failed: %v", err)
+		}
+		if resp.Msg.GetBody() != req.Body {
+			b.Errorf("Echo didn't echo: got %q, want %q", resp.Msg.GetBody(), req.Body)
+		}
 	}
 }
 

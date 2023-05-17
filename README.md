@@ -4,43 +4,67 @@ A trivial echo RPC server in Go using both [Connect](https://connect.build/docs/
 
 ```console
 $ make
-strip -o connect.test.stripped connect.test                                                                                                                                                                 [89/816]
-strip -o grpc.test.stripped grpc.test
-go test -bench . -cpuprofile connect.test.cpuprofile ./connect
 goos: linux
 goarch: amd64
 pkg: github.com/itergia/grpc-connect-benchmark/connect
 cpu: Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz
-BenchmarkEcho/connect-4                     7875            160838 ns/op
-BenchmarkEcho/grpc-4                        5397            196728 ns/op
-BenchmarkEcho/grpcWeb-4                     5672            201658 ns/op
+BenchmarkConnectProto-4             8238            139915 ns/op
 PASS
-ok      github.com/itergia/grpc-connect-benchmark/connect       4.639s
-go tool pprof -svg -output connect.test.cpuprofile.svg -lines -sample_index=cpu connect.test.cpuprofile
-Generating report in connect.test.cpuprofile.svg
-go test -bench . -cpuprofile grpc.test.cpuprofile ./grpc
+ok      github.com/itergia/grpc-connect-benchmark/connect       2.221s
+goos: linux
+goarch: amd64
+pkg: github.com/itergia/grpc-connect-benchmark/connect
+cpu: Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz
+BenchmarkGRPCProto-4        6830            169507 ns/op
+PASS
+ok      github.com/itergia/grpc-connect-benchmark/connect       2.322s
+goos: linux
+goarch: amd64
+pkg: github.com/itergia/grpc-connect-benchmark/connect
+cpu: Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz
+BenchmarkGRPCWebProto-4             6403            189654 ns/op
+PASS
+ok      github.com/itergia/grpc-connect-benchmark/connect       2.427s
 goos: linux
 goarch: amd64
 pkg: github.com/itergia/grpc-connect-benchmark/grpc
 cpu: Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz
-BenchmarkEcho-4             9835            127615 ns/op
+BenchmarkEchoGRPC-4         8624            119151 ns/op
 PASS
-ok      github.com/itergia/grpc-connect-benchmark/grpc  1.414s
-go tool pprof -svg -output grpc.test.cpuprofile.svg -lines -sample_index=cpu grpc.test.cpuprofile
-Generating report in grpc.test.cpuprofile.svg
+ok      github.com/itergia/grpc-connect-benchmark/grpc  1.220s
+goos: linux
+goarch: amd64
+pkg: github.com/itergia/grpc-connect-benchmark/grpc
+cpu: Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz
+BenchmarkEchoNetTLSServer-4         4928            234127 ns/op
+PASS
+ok      github.com/itergia/grpc-connect-benchmark/grpc  2.327s
+goos: linux
+goarch: amd64
+pkg: github.com/itergia/grpc-connect-benchmark/grpc
+cpu: Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz
+BenchmarkEchoH2CServer-4            5403            216930 ns/op
+PASS
+ok      github.com/itergia/grpc-connect-benchmark/grpc  2.322s
 
 Test binary sizes:
-14218250 connect.test
-14175988 grpc.test
+14175411 build/grpc_grpcserver.test
+14211448 build/connect_connectproto.test
+14215711 build/connect_grpcproto.test
+14215722 build/connect_grpcwebproto.test
+15927035 build/grpc_nettlsserver.test
+16150077 build/grpc_h2cserver.test
 
 Stripped test binary sizes:
-9765304 connect.test.stripped
-9717720 grpc.test.stripped
+9717784 build/grpc_grpcserver.test.stripped
+9765304 build/connect_connectproto.test.stripped
+9765304 build/connect_grpcproto.test.stripped
+9765304 build/connect_grpcwebproto.test.stripped
+10938936 build/grpc_nettlsserver.test.stripped
+11083064 build/grpc_h2cserver.test.stripped
 ```
-
-The variability is high (gRPC sometimes goes up to 140 µs/op,) but the relative ordering seems stable.
 
 ## Notes
 
-* The connect benchmark runs all three implementations, so the binary contains three compatibility layers.
-  Adding gRPCWeb-Gateway or EnvoyProxy to translate gRPC-Web to gRPC would be a closer comparison in terms of functionality.
+* Using `-cpuprofile` does nothing for the test file size.
+* Stripping doesn't change the relative order.

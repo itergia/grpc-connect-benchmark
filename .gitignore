@@ -1,4 +1,5 @@
 /*.test
 /*.test.*
 /*/gen/
+/build/
 /prof/

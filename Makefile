@@ -1,28 +1,25 @@
 TESTS = connect grpc
+connect_variants = connectproto grpcproto grpcwebproto
+grpc_variants = grpcserver nettlsserver h2cserver
 
 .PHONY: all
-all: $(foreach test,$(TESTS),$(test).test $(test).test.stripped prof/$(test).test.cpuprofile prof/$(test).test.cpuprofile.svg)
+all:
+	@mkdir -p build
+	@set -e ; for variant in $(connect_variants); do \
+		go test -o build/connect_$$variant.test -cpuprofile prof/connect_$$variant.test.cpuprofile -bench . -tags $$variant ./connect ;\
+		strip -o build/connect_$$variant.test.stripped build/connect_$$variant.test ;\
+	done
+	@set -e ; for variant in $(grpc_variants); do \
+		go test -o build/grpc_$$variant.test -cpuprofile prof/grpc_$$variant.test.cpuprofile -bench . -tags $$variant ./grpc ;\
+		strip -o build/grpc_$$variant.test.stripped build/grpc_$$variant.test ;\
+	done
 	@echo
 	@echo Test binary sizes:
-	@stat -c '%s %n' *.test
+	@stat -c '%s %n' build/*.test | sort -k1,1n
 	@echo
 	@echo Stripped test binary sizes:
-	@stat -c '%s %n' *.test.stripped
+	@stat -c '%s %n' build/*.test.stripped | sort -k1,1n
 
 .PHONY: clean
 clean:
-	rm -fr prof $(foreach test,$(TESTS),$(test).test $(test).test.stripped)
-
-.PHONY: %.test
-%.test:
-	go test -c -bench . ./$(subst .test,,$@)
-
-prof/%.test.cpuprofile: %.test
-	@mkdir -p prof
-	go test -bench . -cpuprofile $@ ./$(subst .test,,$^)
-
-%.cpuprofile.svg: %.cpuprofile
-	go tool pprof -svg -output $@ -lines -sample_index=cpu $^
-
-%.stripped: %
-	strip -o $@ $^
+	rm -fr build prof
